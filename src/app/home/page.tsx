@@ -4,6 +4,7 @@ import Typed from "typed.js";
 import { useEffect } from "react";
 import Typing from "../components/home/typing";
 import Link from "next/link";
+import { Stars } from "../components/home/stars";
 function page() {
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -30,6 +31,7 @@ function page() {
         }}
       />
       <div className="absolute inset-0 bg-gradient-to-br from-blue-950/10 via-transparent to-purple-950/10 pointer-events-none" />
+      <Stars />
       <div className="flex flex-col gap-4 w-150 relative z-10">
         <div className="text-6xl font-roboto font-bold">
           <Typing
