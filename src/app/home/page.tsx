@@ -8,7 +8,7 @@ function page() {
   const textRef = useRef<HTMLSpanElement>(null);
 
   return (
-    <div className="flex justify-center items-center h-screen">
+    <div className="flex justify-center items-center h-screen ">
       <div className="flex flex-col gap-4 w-150">
         <div className="text-6xl font-roboto font-bold">
           <Typing
@@ -23,9 +23,8 @@ function page() {
           Full-Stack Developer | Next.js | Tailwind CSS | TypeScript | React
         </h2>
         <p className="text-lg font-roboto">
-          I am a full-stack developer with a passion for building web
-          applications. I am a quick learner and I am always looking to improve
-          my skills.
+          I am a computer science student at Stony Brook University interested
+          in full stack development, embedded systems, and Machine Learning.
         </p>
         <Link
           href="/projects"
