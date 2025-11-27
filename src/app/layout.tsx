@@ -40,7 +40,7 @@ export default function RootLayout({
             style={{ "--sidebar-width": "10rem" } as React.CSSProperties}
           >
             <Sidebar />
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1">{children}</main>
           </SidebarProvider>
         </ThemeProvider>
       </body>
