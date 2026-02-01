@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* Use system sans as the default. Use the .roboto-sans class to opt-in Roboto */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+
+/* Utility class to apply Roboto Mono to specific elements */
+.roboto-mono {
+  font-family: var(--font-roboto-mono), ui-monospace, SFMono-Regular, Menlo,
+    Monaco, "Roboto Mono", "Courier New", monospace;
+}
+
+/* Utility class to opt-in to Roboto (sans) when needed */
+.roboto-sans {
+  font-family: var(--font-roboto), system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
