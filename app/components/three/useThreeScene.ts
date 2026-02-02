@@ -77,9 +77,9 @@ export const useThreeScene = (
     // WebGL Renderer for stars background
     const webglRenderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true,
+      alpha: false,
     });
-    webglRenderer.setClearColor(0x000000, 0);
+    webglRenderer.setClearColor(0x000000, 1);
     webglRenderer.setSize(window.innerWidth, window.innerHeight);
     webglRenderer.setPixelRatio(window.devicePixelRatio);
     webglRenderer.domElement.style.position = "absolute";
@@ -210,6 +210,33 @@ export const useThreeScene = (
         controls.enabled = true;
       };
     }
+
+    // Attach click handlers to social links
+    const linkGithub = card1.querySelector("#link-github") as HTMLAnchorElement;
+    const linkLinkedin = card1.querySelector(
+      "#link-linkedin",
+    ) as HTMLAnchorElement;
+
+    const setupLinkHandler = (link: HTMLAnchorElement | null) => {
+      if (!link) return;
+      link.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const href = link.getAttribute("href");
+        if (href) {
+          window.open(href, "_blank", "noopener,noreferrer");
+        }
+      };
+      link.onmouseenter = () => {
+        controls.enabled = false;
+      };
+      link.onmouseleave = () => {
+        controls.enabled = true;
+      };
+    };
+
+    setupLinkHandler(linkGithub);
+    setupLinkHandler(linkLinkedin);
 
     // Render function
     const render = () => {

@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #292c3d;
   --foreground: #171717;
+}
+
+/* Ensure JetBrains Mono font variable is available globally */
+:root,
+body,
+html {
+  --font-jetbrains-mono: "JetBrains Mono", monospace;
 }
 
 @theme inline {
@@ -17,7 +24,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #292c3d;
     --foreground: #ededed;
   }
 }
@@ -36,11 +43,11 @@ body {
     sans-serif;
 }
 
-/* Utility class to apply Roboto Mono to specific elements */
+/* Utility class to apply JetBrains Mono to specific elements */
 .roboto-mono {
   font-family:
-    var(--font-roboto-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
-    "Roboto Mono", "Courier New", monospace;
+    "JetBrains Mono", var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
+    Menlo, Monaco, "Courier New", monospace !important;
 }
 
 /* Utility class to opt-in to Roboto (sans) when needed */
@@ -55,3 +62,5 @@ body {
     Arial,
     sans-serif;
 }
+
+/* CSS3D Text Sharpening - fixes blurry text in 3D transforms */

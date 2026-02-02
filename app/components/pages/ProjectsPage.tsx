@@ -1,7 +1,7 @@
 import React from "react";
 
 const ProjectsPage: React.FC = () => (
-  <div className="w-75 h-45 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl shadow-2xl shadow-indigo-500/40 flex flex-col justify-center items-center pointer-events-auto select-none">
+  <div className="w-75 h-45 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl shadow-2xl shadow-indigo-500/40 flex flex-col justify-center items-center pointer-events-auto select-none css3d-sharp">
     <h2 className="m-0 text-white text-xl font-semibold">Page 2</h2>
     <p className="mt-2 text-white/90 text-sm">You traveled here in 3D!</p>
     <button

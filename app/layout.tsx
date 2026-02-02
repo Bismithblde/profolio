@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Roboto, Roboto_Mono } from "next/font/google";
+import { Geist_Mono, Roboto, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -9,10 +9,10 @@ const roboto = Roboto({
   display: "swap",
 });
 
-const robotoMono = Roboto_Mono({
-  variable: "--font-roboto-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.variable} ${robotoMono.variable} ${geistMono.variable} antialiased`}
+        className={`${roboto.variable} ${jetbrainsMono.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
