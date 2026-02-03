@@ -80,3 +80,14 @@ a {
     Arial,
     sans-serif;
 }
+
+/* CSS3D flat text rendering - prevents blur from 3D transforms */
+.css3d-text {
+  transform-style: flat;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}

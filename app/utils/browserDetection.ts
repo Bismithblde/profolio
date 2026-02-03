@@ -33,6 +33,8 @@ export const detectBrowser = (): Browser => {
 };
 
 export const isFirefox = (): boolean => detectBrowser() === "firefox";
+export const isChrome = (): boolean => detectBrowser() === "chrome";
+export const isEdge = (): boolean => detectBrowser() === "edge";
 export const isChromium = (): boolean => {
   const browser = detectBrowser();
   return browser === "chrome" || browser === "edge";

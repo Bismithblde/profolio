@@ -9,7 +9,8 @@ import {
   CSS3DObject,
 } from "three/examples/jsm/renderers/CSS3DRenderer";
 import { createStarfield } from "./Starfield";
-import { isFirefox } from "@/app/utils/browserDetection";
+import { isFirefox, isChrome } from "@/app/utils/browserDetection";
+import { PageConfig } from "@/app/config/pages";
 
 export interface CardPosition {
   x: number;
@@ -18,79 +19,127 @@ export interface CardPosition {
 }
 
 export interface SceneConfig {
-  card1Position?: CardPosition;
-  card2Position?: CardPosition;
   initialCameraZ?: number;
   animationDuration?: number;
+  zoomDuration?: number;
 }
 
 const DEFAULT_CONFIG: Required<SceneConfig> = {
-  card1Position: { x: 0, y: 0, z: 0 },
-  card2Position: { x: -6000, y: 0, z: -2000 }, // Moved further left from -3500 to -6000
   initialCameraZ: 750,
   animationDuration: 3,
+  zoomDuration: 1,
 };
 
+export interface PageRef {
+  id: string;
+  ref: React.RefObject<HTMLDivElement | null>;
+}
+
+export interface SceneAPI {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  controls: OrbitControls;
+  navigateTo: (pageId: string) => void;
+}
+
+/**
+ * Dynamic Three.js scene hook that supports any number of pages
+ * @param containerRef - Reference to the container element
+ * @param pageRefs - Array of page refs with their IDs
+ * @param pageConfigs - Array of page configurations with positions
+ * @param config - Optional scene configuration
+ */
 export const useThreeScene = (
   containerRef: React.RefObject<HTMLDivElement | null>,
-  card1Ref: React.RefObject<HTMLDivElement | null>,
-  card2Ref: React.RefObject<HTMLDivElement | null>,
+  pageRefs: PageRef[],
+  pageConfigs: PageConfig[],
   config: SceneConfig = {},
 ) => {
-  const sceneRef = useRef<{
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    controls: OrbitControls;
-    goToPage1: () => void;
-    goToPage2: () => void;
-  } | null>(null);
+  const sceneRef = useRef<SceneAPI | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
-    const card1 = card1Ref.current;
-    const card2 = card2Ref.current;
-    if (!container || !card1 || !card2) return;
+
+    // Validate all refs are available
+    const allRefs = pageRefs.map((p) => p.ref.current);
+    if (!container || allRefs.some((ref) => ref === null)) return;
 
     const mergedConfig = { ...DEFAULT_CONFIG, ...config };
 
     // Scene
     const scene = new THREE.Scene();
 
-    // Check if Firefox for rendering optimization
+    // Check browsers for rendering optimization
     const firefox = isFirefox();
+    const chrome = isChrome();
+
+    // Reference resolution
+    const REFERENCE_WIDTH = 1920;
+    const REFERENCE_HEIGHT = 1080;
+    
+    // Screen dimensions
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Check if screen is at or above reference resolution
+    const isLargeScreen = screenWidth >= REFERENCE_WIDTH && screenHeight >= REFERENCE_HEIGHT;
+    const isMobile = screenWidth < 768;
 
     // Calculate fullscreen camera distance using trigonometry
     // distance = (height / 2) / tan(fov / 2)
     const fov = 60;
-    const cardHeight = window.innerHeight * 0.75; // 75vh - visual height
     const fovRadians = (fov * Math.PI) / 180;
+    
+    // Card height depends on screen size and browser
+    let cardHeight: number;
+    if (chrome) {
+      cardHeight = isLargeScreen ? REFERENCE_HEIGHT : screenHeight * 0.85;
+    } else {
+      // Firefox/Edge always render at reference size
+      cardHeight = REFERENCE_HEIGHT;
+    }
 
     // Base distance calculation
     let fullscreenDistance = cardHeight / 2 / Math.tan(fovRadians / 2);
 
     // Apply consistent zoom behavior across all browsers
-    // Firefox needs minimal adjustment due to 100vw rendering
-    // Chrome/Edge need more zoom-out to match Firefox's behavior
-    if (firefox) {
-      const screenHeight = window.innerHeight;
-      const resolutionScale = screenHeight / 1080;
-      fullscreenDistance = fullscreenDistance / (1 + resolutionScale * 0.15);
+    if (isMobile) {
+      fullscreenDistance = fullscreenDistance * 1.2;
+    } else if (firefox) {
+      // Firefox: move camera further back to fit scaled content
+      fullscreenDistance = fullscreenDistance * 1.25;
+    } else if (chrome && isLargeScreen) {
+      // Chrome on large screens: slight adjustment for fixed-size cards
+      fullscreenDistance = fullscreenDistance * 1.1;
     } else {
-      // Chrome/Edge: zoom out more to match Firefox
-      fullscreenDistance = fullscreenDistance * 1.15; // Zoom out (farther away)
+      // Edge and other browsers: also move camera further back
+      fullscreenDistance = fullscreenDistance * 1.25;
     }
 
-    const normalDistance = mergedConfig.initialCameraZ;
+    // normalDistance should always be farther than fullscreenDistance for zoom-out effect
+    const normalDistance = Math.max(
+      mergedConfig.initialCameraZ,
+      fullscreenDistance * 1.3,
+    );
 
-    // Camera - start at fullscreen distance
+    // Camera - start at fullscreen distance, position at first page
+    const firstPageConfig = pageConfigs[0];
     const camera = new THREE.PerspectiveCamera(
       fov,
       window.innerWidth / window.innerHeight,
       1,
-      8000,
+      15000, // Increased for larger scenes
     );
-    camera.position.set(0, 0, fullscreenDistance);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(
+      firstPageConfig?.position.x || 0,
+      firstPageConfig?.position.y || 0,
+      (firstPageConfig?.position.z || 0) + fullscreenDistance,
+    );
+    camera.lookAt(
+      firstPageConfig?.position.x || 0,
+      firstPageConfig?.position.y || 0,
+      firstPageConfig?.position.z || 0,
+    );
 
     // CSS3D Renderer
     const renderer = new CSS3DRenderer();
@@ -126,111 +175,92 @@ export const useThreeScene = (
     controls.enablePan = false;
     controls.enableZoom = false;
     controls.enableRotate = false;
+    controls.target.set(
+      firstPageConfig?.position.x || 0,
+      firstPageConfig?.position.y || 0,
+      firstPageConfig?.position.z || 0,
+    );
 
-    // Firefox-specific CSS3D scaling to fix blur (full-width rendering approach)
-    // Other browsers render better at 75vw without scaling
-    let scale = 1;
-    if (firefox) {
-      const screenWidth = window.innerWidth;
-      scale = 0.75 * (1920 / screenWidth);
+    // CSS3D scaling to fix blur (full-width rendering approach)
+    // Chrome: no scaling needed when rendering at reference or viewport size
+    // Firefox/Edge: scale to fit reference-sized content to screen
+    let scale: number;
+    if (chrome) {
+      // Chrome renders at actual size, camera distance handles fitting
+      scale = 1;
+    } else {
+      // Firefox/Edge: scale reference-sized (1920px) content to fit screen
+      // This maintains sharp text by rendering at full resolution then scaling
+      scale = screenWidth / REFERENCE_WIDTH;
     }
 
-    // Create CSS3D Objects from React-rendered elements
-    const card1Object = new CSS3DObject(card1);
-    if (firefox) card1Object.scale.set(scale, scale, scale);
-    card1Object.position.set(
-      mergedConfig.card1Position.x,
-      mergedConfig.card1Position.y,
-      mergedConfig.card1Position.z,
-    );
-    scene.add(card1Object);
+    // Create CSS3D Objects from refs based on page configs
+    const css3dObjects: Map<string, CSS3DObject> = new Map();
 
-    const card2Object = new CSS3DObject(card2);
-    if (firefox) card2Object.scale.set(scale, scale, scale);
-    card2Object.position.set(
-      mergedConfig.card2Position.x,
-      mergedConfig.card2Position.y,
-      mergedConfig.card2Position.z,
-    );
-    scene.add(card2Object);
+    pageRefs.forEach((pageRef) => {
+      const element = pageRef.ref.current;
+      const pageConfig = pageConfigs.find((c) => c.id === pageRef.id);
 
-    // Navigation functions
-    const goToPage2 = () => {
-      console.log("Going to Page 2!");
+      if (element && pageConfig) {
+        const css3dObject = new CSS3DObject(element);
+        css3dObject.scale.set(scale, scale, scale);
+        css3dObject.position.set(
+          pageConfig.position.x,
+          pageConfig.position.y,
+          pageConfig.position.z,
+        );
+        scene.add(css3dObject);
+        css3dObjects.set(pageRef.id, css3dObject);
+      }
+    });
+
+    // Track current page for navigation
+    let currentPageId = pageConfigs[0]?.id || "";
+
+    // Generic navigation function
+    const navigateTo = (targetPageId: string) => {
+      const targetConfig = pageConfigs.find((c) => c.id === targetPageId);
+      if (!targetConfig) {
+        console.warn(`Page "${targetPageId}" not found`);
+        return;
+      }
+
+      console.log(`Navigating from "${currentPageId}" to "${targetPageId}"`);
       controls.enabled = false;
 
-      // First zoom out, then navigate to page 2
       const timeline = gsap.timeline();
 
       // Step 1: Zoom out to normal distance
       timeline.to(camera.position, {
-        z: normalDistance,
-        duration: 1,
+        z: camera.position.z + (normalDistance - fullscreenDistance),
+        duration: mergedConfig.zoomDuration,
         ease: "power2.inOut",
       });
 
-      // Step 2: Navigate to page 2 with same zoom level as landing page
+      // Step 2: Navigate to target page
       timeline.to(camera.position, {
-        x: mergedConfig.card2Position.x,
-        y: 0,
-        z: mergedConfig.card2Position.z + fullscreenDistance,
+        x: targetConfig.position.x,
+        y: targetConfig.position.y,
+        z: targetConfig.position.z + fullscreenDistance,
         duration: mergedConfig.animationDuration,
         ease: "power2.inOut",
         onComplete: () => {
           controls.enabled = true;
+          currentPageId = targetPageId;
         },
       });
 
       timeline.to(
         controls.target,
         {
-          x: mergedConfig.card2Position.x,
-          y: 0,
-          z: mergedConfig.card2Position.z - fullscreenDistance,
-          duration: mergedConfig.animationDuration,
-          ease: "power2.inOut",
-        },
-        "<",
-      ); // Start at same time as camera movement
-    };
-
-    const goToPage1 = () => {
-      console.log("Going back to Page 1!");
-      controls.enabled = false;
-
-      // Navigate back to page 1, then zoom in to fullscreen
-      const timeline = gsap.timeline();
-
-      // Step 1: Navigate to page 1 at normal distance
-      timeline.to(camera.position, {
-        x: 0,
-        y: 0,
-        z: normalDistance,
-        duration: mergedConfig.animationDuration,
-        ease: "power2.inOut",
-      });
-
-      timeline.to(
-        controls.target,
-        {
-          x: 0,
-          y: 0,
-          z: 0,
+          x: targetConfig.position.x,
+          y: targetConfig.position.y,
+          z: targetConfig.position.z,
           duration: mergedConfig.animationDuration,
           ease: "power2.inOut",
         },
         "<",
       );
-
-      // Step 2: Zoom in to fullscreen
-      timeline.to(camera.position, {
-        z: fullscreenDistance,
-        duration: 1,
-        ease: "power2.inOut",
-        onComplete: () => {
-          controls.enabled = true;
-        },
-      });
     };
 
     // Store refs for external access
@@ -238,52 +268,36 @@ export const useThreeScene = (
       scene,
       camera,
       controls,
-      goToPage1,
-      goToPage2,
+      navigateTo,
     };
 
-    // Attach click handlers to buttons using native DOM
-    const btnToPage2 = card1.querySelector(
-      "#btn-to-page2",
-    ) as HTMLButtonElement;
-    const btnToPage1 = card2.querySelector(
-      "#btn-to-page1",
-    ) as HTMLButtonElement;
+    // Setup navigation button handlers dynamically
+    pageConfigs.forEach((pageConfig) => {
+      if (pageConfig.navButton) {
+        const pageRef = pageRefs.find((p) => p.id === pageConfig.id);
+        if (pageRef?.ref.current) {
+          const button = pageRef.ref.current.querySelector(
+            `#${pageConfig.navButton.buttonId}`,
+          ) as HTMLButtonElement;
 
-    if (btnToPage2) {
-      btnToPage2.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        goToPage2();
-      };
-      btnToPage2.onmouseenter = () => {
-        controls.enabled = false;
-      };
-      btnToPage2.onmouseleave = () => {
-        controls.enabled = true;
-      };
-    }
+          if (button) {
+            button.onclick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigateTo(pageConfig.navButton!.targetPageId);
+            };
+            button.onmouseenter = () => {
+              controls.enabled = false;
+            };
+            button.onmouseleave = () => {
+              controls.enabled = true;
+            };
+          }
+        }
+      }
+    });
 
-    if (btnToPage1) {
-      btnToPage1.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        goToPage1();
-      };
-      btnToPage1.onmouseenter = () => {
-        controls.enabled = false;
-      };
-      btnToPage1.onmouseleave = () => {
-        controls.enabled = true;
-      };
-    }
-
-    // Attach click handlers to social links
-    const linkGithub = card1.querySelector("#link-github") as HTMLAnchorElement;
-    const linkLinkedin = card1.querySelector(
-      "#link-linkedin",
-    ) as HTMLAnchorElement;
-
+    // Setup link handlers for all pages
     const setupLinkHandler = (link: HTMLAnchorElement | null) => {
       if (!link) return;
       link.onclick = (e) => {
@@ -302,8 +316,15 @@ export const useThreeScene = (
       };
     };
 
-    setupLinkHandler(linkGithub);
-    setupLinkHandler(linkLinkedin);
+    // Find and setup all external links across all pages
+    pageRefs.forEach((pageRef) => {
+      if (pageRef.ref.current) {
+        const links = pageRef.ref.current.querySelectorAll(
+          'a[target="_blank"]',
+        ) as NodeListOf<HTMLAnchorElement>;
+        links.forEach(setupLinkHandler);
+      }
+    });
 
     // Render function
     const render = () => {
@@ -340,7 +361,7 @@ export const useThreeScene = (
       webglRenderer.dispose();
       sceneRef.current = null;
     };
-  }, [containerRef, card1Ref, card2Ref, config]);
+  }, [containerRef, pageRefs, pageConfigs, config]);
 
   return sceneRef;
 };

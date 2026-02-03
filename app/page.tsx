@@ -1,15 +1,28 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { LandingPage, ProjectsPage, useThreeScene } from "./components";
+import type { PageRef } from "./components";
+import { PAGE_CONFIGS } from "./config/pages";
 
 const Page: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const card1Ref = useRef<HTMLDivElement | null>(null);
-  const card2Ref = useRef<HTMLDivElement | null>(null);
 
-  // Initialize Three.js scene with custom hook
-  useThreeScene(containerRef, card1Ref, card2Ref);
+  // Create refs for each page in the registry
+  const landingRef = useRef<HTMLDivElement | null>(null);
+  const projectsRef = useRef<HTMLDivElement | null>(null);
+
+  // Map page IDs to their refs
+  const pageRefs: PageRef[] = useMemo(
+    () => [
+      { id: "landing", ref: landingRef },
+      { id: "projects", ref: projectsRef },
+    ],
+    [],
+  );
+
+  // Initialize Three.js scene with dynamic pages
+  useThreeScene(containerRef, pageRefs, PAGE_CONFIGS);
 
   return (
     <div
@@ -21,10 +34,10 @@ const Page: React.FC = () => {
         className="absolute opacity-0 pointer-events-none"
         style={{ left: "-9999px" }}
       >
-        <div ref={card1Ref}>
+        <div ref={landingRef}>
           <LandingPage />
         </div>
-        <div ref={card2Ref}>
+        <div ref={projectsRef}>
           <ProjectsPage />
         </div>
       </div>
