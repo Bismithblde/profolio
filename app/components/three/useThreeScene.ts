@@ -9,6 +9,7 @@ import {
   CSS3DObject,
 } from "three/examples/jsm/renderers/CSS3DRenderer";
 import { createStarfield } from "./Starfield";
+import { isFirefox } from "@/app/utils/browserDetection";
 
 export interface CardPosition {
   x: number;
@@ -25,7 +26,7 @@ export interface SceneConfig {
 
 const DEFAULT_CONFIG: Required<SceneConfig> = {
   card1Position: { x: 0, y: 0, z: 0 },
-  card2Position: { x: -3500, y: 0, z: -2000 },
+  card2Position: { x: -6000, y: 0, z: -2000 }, // Moved further left from -3500 to -6000
   initialCameraZ: 750,
   animationDuration: 3,
 };
@@ -55,14 +56,40 @@ export const useThreeScene = (
     // Scene
     const scene = new THREE.Scene();
 
-    // Camera
+    // Check if Firefox for rendering optimization
+    const firefox = isFirefox();
+
+    // Calculate fullscreen camera distance using trigonometry
+    // distance = (height / 2) / tan(fov / 2)
+    const fov = 60;
+    const cardHeight = window.innerHeight * 0.75; // 75vh - visual height
+    const fovRadians = (fov * Math.PI) / 180;
+
+    // Base distance calculation
+    let fullscreenDistance = cardHeight / 2 / Math.tan(fovRadians / 2);
+
+    // Apply consistent zoom behavior across all browsers
+    // Firefox needs minimal adjustment due to 100vw rendering
+    // Chrome/Edge need more zoom-out to match Firefox's behavior
+    if (firefox) {
+      const screenHeight = window.innerHeight;
+      const resolutionScale = screenHeight / 1080;
+      fullscreenDistance = fullscreenDistance / (1 + resolutionScale * 0.15);
+    } else {
+      // Chrome/Edge: zoom out more to match Firefox
+      fullscreenDistance = fullscreenDistance * 1.15; // Zoom out (farther away)
+    }
+
+    const normalDistance = mergedConfig.initialCameraZ;
+
+    // Camera - start at fullscreen distance
     const camera = new THREE.PerspectiveCamera(
-      60,
+      fov,
       window.innerWidth / window.innerHeight,
       1,
       8000,
     );
-    camera.position.set(0, 0, mergedConfig.initialCameraZ);
+    camera.position.set(0, 0, fullscreenDistance);
     camera.lookAt(0, 0, 0);
 
     // CSS3D Renderer
@@ -100,8 +127,17 @@ export const useThreeScene = (
     controls.enableZoom = false;
     controls.enableRotate = false;
 
+    // Firefox-specific CSS3D scaling to fix blur (full-width rendering approach)
+    // Other browsers render better at 75vw without scaling
+    let scale = 1;
+    if (firefox) {
+      const screenWidth = window.innerWidth;
+      scale = 0.75 * (1920 / screenWidth);
+    }
+
     // Create CSS3D Objects from React-rendered elements
     const card1Object = new CSS3DObject(card1);
+    if (firefox) card1Object.scale.set(scale, scale, scale);
     card1Object.position.set(
       mergedConfig.card1Position.x,
       mergedConfig.card1Position.y,
@@ -110,6 +146,7 @@ export const useThreeScene = (
     scene.add(card1Object);
 
     const card2Object = new CSS3DObject(card2);
+    if (firefox) card2Object.scale.set(scale, scale, scale);
     card2Object.position.set(
       mergedConfig.card2Position.x,
       mergedConfig.card2Position.y,
@@ -122,10 +159,21 @@ export const useThreeScene = (
       console.log("Going to Page 2!");
       controls.enabled = false;
 
-      gsap.to(camera.position, {
+      // First zoom out, then navigate to page 2
+      const timeline = gsap.timeline();
+
+      // Step 1: Zoom out to normal distance
+      timeline.to(camera.position, {
+        z: normalDistance,
+        duration: 1,
+        ease: "power2.inOut",
+      });
+
+      // Step 2: Navigate to page 2 with same zoom level as landing page
+      timeline.to(camera.position, {
         x: mergedConfig.card2Position.x,
         y: 0,
-        z: mergedConfig.card2Position.z + 500,
+        z: mergedConfig.card2Position.z + fullscreenDistance,
         duration: mergedConfig.animationDuration,
         ease: "power2.inOut",
         onComplete: () => {
@@ -133,36 +181,55 @@ export const useThreeScene = (
         },
       });
 
-      gsap.to(controls.target, {
-        x: mergedConfig.card2Position.x,
-        y: 0,
-        z: mergedConfig.card2Position.z - 500,
-        duration: mergedConfig.animationDuration,
-        ease: "power2.inOut",
-      });
+      timeline.to(
+        controls.target,
+        {
+          x: mergedConfig.card2Position.x,
+          y: 0,
+          z: mergedConfig.card2Position.z - fullscreenDistance,
+          duration: mergedConfig.animationDuration,
+          ease: "power2.inOut",
+        },
+        "<",
+      ); // Start at same time as camera movement
     };
 
     const goToPage1 = () => {
       console.log("Going back to Page 1!");
       controls.enabled = false;
 
-      gsap.to(camera.position, {
+      // Navigate back to page 1, then zoom in to fullscreen
+      const timeline = gsap.timeline();
+
+      // Step 1: Navigate to page 1 at normal distance
+      timeline.to(camera.position, {
         x: 0,
         y: 0,
-        z: mergedConfig.initialCameraZ,
+        z: normalDistance,
         duration: mergedConfig.animationDuration,
+        ease: "power2.inOut",
+      });
+
+      timeline.to(
+        controls.target,
+        {
+          x: 0,
+          y: 0,
+          z: 0,
+          duration: mergedConfig.animationDuration,
+          ease: "power2.inOut",
+        },
+        "<",
+      );
+
+      // Step 2: Zoom in to fullscreen
+      timeline.to(camera.position, {
+        z: fullscreenDistance,
+        duration: 1,
         ease: "power2.inOut",
         onComplete: () => {
           controls.enabled = true;
         },
-      });
-
-      gsap.to(controls.target, {
-        x: 0,
-        y: 0,
-        z: 0,
-        duration: mergedConfig.animationDuration,
-        ease: "power2.inOut",
       });
     };
 

@@ -48,6 +48,24 @@ body {
   font-family:
     "JetBrains Mono", var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
     Menlo, Monaco, "Courier New", monospace !important;
+  /* Chrome blurry text fix - from Stack Overflow */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+}
+
+/* Global text anti-blur for transformed elements */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+button,
+a {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Utility class to opt-in to Roboto (sans) when needed */
@@ -62,5 +80,3 @@ body {
     Arial,
     sans-serif;
 }
-
-/* CSS3D Text Sharpening - fixes blurry text in 3D transforms */
