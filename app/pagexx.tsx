@@ -1,5 +1,6 @@
 import React from "react";
 import githubLogo from "../public/github.png";
+import * as THREE from "three";
 export default function page() {
   return (
     <div className="flex justify-center items-center h-screen flex-col gap-10">

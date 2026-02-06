@@ -104,16 +104,16 @@ export const useThreeScene = (
 
     // Apply consistent zoom behavior across all browsers
     if (isMobile) {
-      fullscreenDistance = fullscreenDistance * 1.2;
+      fullscreenDistance = fullscreenDistance * 1.3;
     } else if (firefox) {
       // Firefox: move camera further back to fit scaled content
-      fullscreenDistance = fullscreenDistance * 1.25;
+      fullscreenDistance = fullscreenDistance * 1.35;
     } else if (chrome && isLargeScreen) {
       // Chrome on large screens: slight adjustment for fixed-size cards
-      fullscreenDistance = fullscreenDistance * 1.1;
+      fullscreenDistance = fullscreenDistance * 1.2;
     } else {
       // Edge and other browsers: also move camera further back
-      fullscreenDistance = fullscreenDistance * 1.25;
+      fullscreenDistance = fullscreenDistance * 1.35;
     }
 
     // normalDistance should always be farther than fullscreenDistance for zoom-out effect
