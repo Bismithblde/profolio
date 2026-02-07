@@ -2,12 +2,11 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 // @ts-ignore
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-// @ts-ignore
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   CSS3DRenderer,
   CSS3DObject,
-} from "three/examples/jsm/renderers/CSS3DRenderer";
+} from "three/addons/renderers/CSS3DRenderer.js";
 import { createStarfield } from "./Starfield";
 import { isFirefox, isChrome } from "@/app/utils/browserDetection";
 import { PageConfig } from "@/app/config/pages";
